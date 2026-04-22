@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>AI Coding OS - Company Mode</title>
+
+<style>
+body { margin:0; font-family:Arial; background:#0d1117; color:white; }
+#topbar { padding:10px; background:#161b22; }
+#container { display:flex; height:90vh; }
+textarea {
+  width:50%;
+  background:#000;
+  color:#00ffcc;
+  border:none;
+  padding:10px;
+  font-family:monospace;
+}
+iframe { width:50%; border:none; background:white; }
+button { margin-right:5px; padding:8px; background:#238636; border:none; color:white; }
+</style>
+</head>
+
+<body>
+
+<div id="topbar">
+  <button onclick="run()">▶ Run</button>
+  <button onclick="aiBuild()">🤖 Build</button>
+  <button onclick="aiFix()">🛠 Fix</button>
+  <button onclick="aiPlan()">🧠 Plan</button>
+</div>
+
+<div id="container">
+  <textarea id="editor"><h1>Start building...</h1></textarea>
+  <iframe id="preview"></iframe>
+</div>
+
+<script>
+function run() {
+  document.getElementById("preview").srcdoc =
+    document.getElementById("editor").value;
+}
+
+// 🔥 MASTER AI CALL
+async function callAI(prompt, mode="coder") {
+  const res = await fetch("http://localhost:3000/ai", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ prompt, mode })
+  });
+
+  const data = await res.json();
+  return data.result;
+}
+
+// 🤖 AGENTS
+async function aiBuild() {
+  const prompt = promptUser();
+  const code = await callAI(prompt, "coder");
+  editor.value = code;
+}
+
+async function aiFix() {
+  const code = editor.value;
+  const fixed = await callAI(code, "debugger");
+  editor.value = fixed;
+}
+
+async function aiPlan() {
+  const idea = promptUser();
+  const plan = await callAI(idea, "planner");
+  alert(plan);
+}
+
+function promptUser() {
+  return prompt("What do you want to build?");
+}
+</script>
+
+</body>
+</html>
