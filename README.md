@@ -16,4 +16,4 @@ node server.js
 Open index.html in browser
 
 ## Notes
-Add your OpenAI API key in server.js
+Set OPENAI_API_KEY in the server environment, never in source code. This API has no authentication; do not expose it publicly with a funded key without access controls.
