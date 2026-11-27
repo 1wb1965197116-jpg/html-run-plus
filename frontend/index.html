@@ -1,81 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AI Coding OS - Company Mode</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Coding OS - HTML Run Plus</title>
 <style>
-body { margin:0; font-family:Arial; background:#0d1117; color:white; }
-#topbar { padding:10px; background:#161b22; }
-#container { display:flex; height:90vh; }
-textarea {
-  width:50%;
-  background:#000;
-  color:#00ffcc;
-  border:none;
-  padding:10px;
-  font-family:monospace;
-}
-iframe { width:50%; border:none; background:white; }
-button { margin-right:5px; padding:8px; background:#238636; border:none; color:white; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; background: #0d1117; color: #f0f6fc; }
+#topbar { padding: 14px; background: #161b22; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button { padding: 10px 14px; background: #238636; border: 0; border-radius: 6px; color: white; cursor: pointer; }
+button:disabled { opacity: .55; cursor: wait; }
+#status { padding: 8px 14px; color: #9da7b3; }
+#container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; height: calc(100vh - 105px); }
+#editor { width: 100%; height: 100%; resize: none; background: #000; color: #00ffcc; border: 1px solid #30363d; border-radius: 6px; padding: 12px; font: 14px/1.5 monospace; }
+iframe { width: 100%; height: 100%; border: 1px solid #30363d; border-radius: 6px; background: white; }
+@media (max-width: 700px) { #container { grid-template-columns: 1fr; height: auto; } #editor, iframe { height: 42vh; } }
 </style>
 </head>
-
 <body>
-
 <div id="topbar">
-  <button onclick="run()">▶ Run</button>
+  <button onclick="run()">▶ Run Preview</button>
   <button onclick="aiBuild()">🤖 Build</button>
   <button onclick="aiFix()">🛠 Fix</button>
   <button onclick="aiPlan()">🧠 Plan</button>
 </div>
-
+<div id="status" role="status">Ready. AI actions require OPENAI_API_KEY to be configured on the server.</div>
 <div id="container">
-  <textarea id="editor"><h1>Start building...</h1></textarea>
-  <iframe id="preview"></iframe>
+  <textarea id="editor" aria-label="HTML editor"><h1>Start building...</h1></textarea>
+  <iframe id="preview" title="HTML preview" sandbox="allow-scripts"></iframe>
 </div>
-
 <script>
+const editor = document.getElementById("editor");
+const statusEl = document.getElementById("status");
+const buttons = [...document.querySelectorAll("button")];
+
 function run() {
-  document.getElementById("preview").srcdoc =
-    document.getElementById("editor").value;
+  document.getElementById("preview").srcdoc = editor.value;
 }
 
-// 🔥 MASTER AI CALL
-async function callAI(prompt, mode="coder") {
-  const res = await fetch("http://localhost:3000/ai", {
+async function callAI(text, mode = "coder") {
+  const response = await fetch("/ai", {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ prompt, mode })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: text, mode })
   });
-
-  const data = await res.json();
-  return data.result;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "AI request failed");
+  return data.result || "";
 }
 
-// 🤖 AGENTS
-async function aiBuild() {
-  const prompt = promptUser();
-  const code = await callAI(prompt, "coder");
-  editor.value = code;
+async function runAgent(mode) {
+  const input = mode === "coder" || mode === "planner"
+    ? window.prompt(mode === "planner" ? "What business or app should I plan?" : "What do you want to build?")
+    : editor.value;
+  if (input === null || !input.trim()) return;
+  buttons.forEach(button => button.disabled = true);
+  statusEl.textContent = "Working...";
+  try {
+    const result = await callAI(input, mode);
+    if (mode === "planner") window.alert(result);
+    else { editor.value = result; run(); }
+    statusEl.textContent = "Complete.";
+  } catch (error) {
+    statusEl.textContent = error.message;
+  } finally {
+    buttons.forEach(button => button.disabled = false);
+  }
 }
 
-async function aiFix() {
-  const code = editor.value;
-  const fixed = await callAI(code, "debugger");
-  editor.value = fixed;
-}
-
-async function aiPlan() {
-  const idea = promptUser();
-  const plan = await callAI(idea, "planner");
-  alert(plan);
-}
-
-function promptUser() {
-  return prompt("What do you want to build?");
-}
+function aiBuild() { return runAgent("coder"); }
+function aiFix() { return runAgent("debugger"); }
+function aiPlan() { return runAgent("planner"); }
 </script>
-
 </body>
 </html>
